@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=TraceWeaver
+GenericName=AI Coding Context Dashboard
+Comment=Local context infrastructure for AI coding agents
+Exec=xdg-open http://localhost:7777
+Icon=traceweaver
+Terminal=false
+Categories=Development;
+StartupNotify=false

@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/* TraceWeaver design tokens — derived from docs/plan/12_ux_ui_design.md §3.1
+ * (with Codex round-2 patch P2 applied: popover / secondary / info / chart /
+ * sidebar tokens are first-class). Tailwind v4 CSS-first theme variables. */
+
+@theme {
+  --color-background: hsl(0 0% 100%);
+  --color-foreground: hsl(222.2 84% 4.9%);
+
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(222.2 84% 4.9%);
+
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(222.2 84% 4.9%);
+
+  --color-primary: hsl(221 83% 53%);
+  --color-primary-foreground: hsl(210 40% 98%);
+
+  --color-secondary: hsl(210 40% 96%);
+  --color-secondary-foreground: hsl(222.2 47.4% 11.2%);
+
+  --color-muted: hsl(210 40% 96%);
+  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
+
+  --color-accent: hsl(210 40% 96%);
+  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
+
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(210 40% 98%);
+
+  --color-success: hsl(142 71% 45%);
+  --color-success-foreground: hsl(0 0% 100%);
+
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-foreground: hsl(0 0% 100%);
+
+  --color-info: hsl(199 89% 48%);
+  --color-info-foreground: hsl(0 0% 100%);
+
+  --color-border: hsl(214.3 31.8% 91.4%);
+  --color-input: hsl(214.3 31.8% 91.4%);
+  --color-ring: hsl(221 83% 53%);
+
+  --color-sidebar: hsl(222 14% 9%);
+  --color-sidebar-foreground: hsl(210 40% 98%);
+  --color-sidebar-muted: hsl(217 19% 27%);
+
+  --color-chart-1: hsl(221 83% 53%);
+  --color-chart-2: hsl(142 71% 45%);
+  --color-chart-3: hsl(38 92% 50%);
+  --color-chart-4: hsl(263 70% 50%);
+  --color-chart-5: hsl(199 89% 48%);
+
+  --radius: 0.5rem;
+
+  --font-sans: "Inter", "Pretendard", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, "Cascadia Mono", monospace;
+}
+
+@layer base {
+  .dark {
+    --color-background: hsl(222.2 84% 4.9%);
+    --color-foreground: hsl(210 40% 98%);
+
+    --color-card: hsl(222 14% 12%);
+    --color-card-foreground: hsl(210 40% 98%);
+
+    --color-popover: hsl(222 14% 12%);
+    --color-popover-foreground: hsl(210 40% 98%);
+
+    --color-primary: hsl(217 91% 60%);
+    --color-primary-foreground: hsl(222.2 47.4% 11.2%);
+
+    --color-secondary: hsl(217 19% 27%);
+    --color-secondary-foreground: hsl(210 40% 98%);
+
+    --color-muted: hsl(217 19% 27%);
+    --color-muted-foreground: hsl(215 20% 65%);
+
+    --color-accent: hsl(217 19% 27%);
+    --color-accent-foreground: hsl(210 40% 98%);
+
+    --color-destructive: hsl(0 63% 60%);
+    --color-destructive-foreground: hsl(210 40% 98%);
+
+    --color-success: hsl(142 71% 45%);
+    --color-warning: hsl(38 92% 50%);
+    --color-info: hsl(199 89% 48%);
+
+    --color-border: hsl(217 19% 24%);
+    --color-input: hsl(217 19% 24%);
+    --color-ring: hsl(217 91% 60%);
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Honor reduced motion (Codex round-2 patch P2). */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Hide scrollbars only when explicitly opted in (timeline / pre blocks). */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}

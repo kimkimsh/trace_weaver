@@ -1,0 +1,78 @@
+TraceWeaver 프로젝트 이어서 진행해줘.
+
+직전 세션-2 에서 P0 3건 + P1-(a) WebSocket 풀 wire 까지 land 했어.
+end-to-end 검증 (status 라이브 / pyright errors=0 / pytest 49 passed /
+WS 4종 메시지 broadcast) 모두 통과.
+
+다음 세션 첫 액션:
+
+1. 먼저 `docs/handoff/2026-04-26_session-2/handoff.md` 정독해줘.
+   §0 30초 요약 / §1 동작 확인된 것 / §2 알려진 stub / §3 알려진
+   부채 / §4 다음 우선순위 / §5 핵심 파일 인덱스 / §6 운영 룰 /
+   §7 5단계 검증 체크리스트 / §8 시작 권장 순서 다 들어 있어.
+
+2. 세션-1 핸드오프 (`docs/handoff/2026-04-26_session-handoff.md`)
+   는 P2 항목 (§4 의 7-12번) 만 참조. P1 은 세션-2 핸드오프가
+   갱신본.
+
+3. `docs/plan/16_roadmap.md` 의 B1-2 / B1-3 / B2 / B3 항목도 같이
+   읽어둬. 1차 진리는 여전히 `docs/plan/` 19 docs (15 ADR 잠금).
+
+4. 세션-2 핸드오프 §7 5단계 검증 체크리스트 (venv / pytest smoke /
+   pyright errors=0 / vite build + ui_static sync / 데몬 부팅 + status
+   라이브 + WS hello) 부터 돌려서 환경이 그대로 유효한지 확인.
+
+5. 그 다음 §4 P1 중에서 골라 진입. 추천 우선순위:
+   (a) B1-2 git collector (Dulwich + post-* hooks 자동 인스톨러)
+       — 가장 작은 다음 콜렉터, shell 패턴(collectors/shell.py)
+       그대로 재사용 + Dulwich repo watch. 수확 큼.
+   (b) `traceweaver.store.repository` 미완 메서드 채우기
+       → 라우터들 thin refactor. 현재 conventions/recommendations
+       라우터가 stmt 를 직접 조립 — repository 채우면 30줄 → 8줄.
+       기술 부채 청산.
+   (c) `/api/v1/outputs` + `/api/v1/mode` live wire
+       — B2 land 전이라도 read-only wire 만 하면 GUI Outputs /
+       Mode 화면이 stub 빈 list 가 아니라 실 데이터 표시.
+       데모 임팩트 큼.
+
+운영 룰 (세션-1/2 와 동일):
+- Codex pair review 는 SKIP. 내가 명시적으로 "코덱스 켜라"
+  하기 전까진 그대로.
+- UI 는 니가 직접 작성. "클로드 디자인" 위임 없음.
+- 모든 변경은 docs/work_log/<topic-slug>/<YYYY-MM-DD>_<action>.md
+  5섹션 형식 (Context / Files changed / Why / Verification /
+  Follow-ups). 트리비얼해도 10줄짜리 로그 남겨.
+  단 내가 명시적으로 "시간 우선, log skip" 지시하면 skip 가능.
+- `docs/plan/` 가 1차 진리. 충돌 시 plan 이 이김.
+- Subagent-first dispatch default. teammate 모드는
+  CLAUDE.md 의 5 항목 체크리스트 통과할 때만.
+
+세션-2 에서 land 한 변경 요약 (참고용):
+- src/traceweaver/api/routers/status.py — 라이브 wire (P0-1)
+- src/traceweaver/api/routers/{conventions,recommendations,demo}.py
+  — PATCH/seed 후 ws.broadcast wire (P1-a)
+- src/traceweaver/daemon/ws_messages.py — 신규 (WS 메시지 단일 진리)
+- src/traceweaver/collectors/{constants,shell}.py — WS_MSG_EVENT_STORED
+  를 ws_messages 로 이전
+- src/traceweaver/core/logger.py — _CONFIGURED → _configured (pyright)
+- pyproject.toml — [tool.pyright] venvPath/venv 추가
+- ui/src/lib/ws.ts — 신규 (auto-reconnect + 19 메시지 → query
+  invalidate)
+- ui/src/main.tsx — connectWebSocket(queryClient) 호출
+- src/traceweaver/ui_static/ — 새 vite build sync
+- tests/test_smoke_imports.py + tests/test_dto_shapes.py — 신규
+  (49 케이스, DTO Literal 알파벳 회귀 가드 포함)
+- docs/work_log/typecheck/, docs/work_log/testing/,
+  docs/work_log/api-routers/ 에 work log 4건 (P0 묶음)
+
+알려진 부채 (P3 — 다음 세션이 짬 나면):
+- justfile ui-build 타겟에 ui_static sync 1줄 추가
+  (현재는 수동 cp 필요)
+- 11 pyright warnings (msgpack stub 부재) — `types-msgpack`
+  도입 또는 cast() 정리
+- 5-min rolling backpressure_drops 카운터 (B1-2 묶어서)
+- audit_chain 의도적 INSERT 후 verify 진짜 통과 검증
+- P1-(a) WS wire 단독 work log skip 됨 — archeology 필요시
+  세션-2 핸드오프 §1 (B) + §5 의 신규 파일 인덱스 참조
+
+철저하게 분석 검토하면서 진행해줘.

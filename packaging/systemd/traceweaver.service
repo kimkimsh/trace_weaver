@@ -1,0 +1,45 @@
+# TraceWeaver — systemd --user unit
+#
+# Canonical reference: docs/preset/06_systemd_runtime.md §6.1
+#                      docs/plan/14_cli_packaging.md §14.11
+#                      docs/plan/09_daemon_api.md §9.10, §9.14
+#
+# Type=notify: daemon must call sd_notify("READY=1") after startup completes.
+# WatchdogSec=60s: daemon must call sd_notify("WATCHDOG=1") every ~30s
+#                  (WATCHDOG_USEC env is set by systemd; daemon halves it).
+#
+# Install via packaging/scripts/install_user_unit.sh (B0-6 helper).
+
+[Unit]
+Description=TraceWeaver local daemon
+Documentation=https://traceweaver.dev/docs
+After=default.target
+
+[Service]
+Type=notify
+# ExecStart selects the first available daemon binary.
+# Order: pipx default install (~/.local/bin) → uv tool install
+#        (~/.local/share/uv/tools/traceweaver/bin). Both are produced from the
+#        [project.scripts] entry traceweaver-daemon = traceweaver.daemon.app:run
+#        (see plan/14 §14.10). The .deb path /opt/traceweaver/venv/bin/...
+#        is intentionally NOT covered here; the .deb postinst ships a separate
+#        unit override pointing directly at the venv binary (plan/14 §14.11.1).
+ExecStart=/usr/bin/env -S sh -c 'exec "$HOME/.local/bin/traceweaver-daemon" || exec "$HOME/.local/share/uv/tools/traceweaver/bin/traceweaver-daemon"'
+Restart=on-failure
+RestartSec=2s
+TimeoutStartSec=30s
+TimeoutStopSec=15s
+WatchdogSec=60s
+MemoryMax=2G
+TasksMax=200
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/traceweaver %h/.cache/traceweaver %h/.config/traceweaver %t/traceweaver
+StandardOutput=journal
+StandardError=journal
+Environment=TW_LOG_MODE=json TW_LOG_LEVEL=info
+
+[Install]
+WantedBy=default.target

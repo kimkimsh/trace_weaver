@@ -1,0 +1,225 @@
+[project]
+name = "traceweaver"
+version = "0.1.0"
+description = "Linux dev context infrastructure for AI coding agents"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+license = "MPL-2.0"
+authors = [{ name = "TraceWeaver Maintainers" }]
+keywords = ["agents.md", "ai-coding", "linux", "local-llm", "context"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: No Input/Output (Daemon)",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+]
+dependencies = [
+    # Web framework + ASGI
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "uvloop>=0.21; sys_platform == 'linux'",
+    "websockets>=14.1",
+
+    # Validation + settings
+    "pydantic>=2.10",
+    "pydantic-settings>=2.6",
+
+    # ORM + migrations + vector
+    "sqlalchemy[asyncio]>=2.0.36",
+    "aiosqlite>=0.20",
+    "alembic>=1.14",
+    "sqlite-vec>=0.1.6",
+
+    # HTTP client + retry
+    "httpx>=0.28",
+    "tenacity>=9.0",
+
+    # Logging
+    "structlog>=24.4",
+    "rich>=13.9",
+
+    # Scheduling — preset audit (docs/work_log/docs-preset/2026-04-26_audit-and-apply-preset.md)
+    # confirmed APScheduler 4.x has no stable wheel on PyPI; pin to 3.x stable.
+    "apscheduler>=3.11,<4",
+
+    # System
+    "psutil>=6.1",
+    "filelock>=3.16",
+
+    # Filesystem
+    "inotify-simple>=1.3.5",
+    "pathspec>=0.12",
+    "watchfiles>=1.0",
+
+    # Git
+    "dulwich>=0.22",
+
+    # Redaction
+    "pyahocorasick>=2.1",
+
+    # CLI
+    "typer>=0.15",
+
+    # Templates
+    "jinja2>=3.1",
+
+    # Misc
+    "msgpack>=1.1",
+    "tomli>=2.2",
+    "tomli-w>=1.1",
+
+    # systemd integration (optional; gracefully no-op if not installed)
+    "sdnotify>=0.3.2",
+]
+
+[project.optional-dependencies]
+# LLM backends are optional extras (heavy, hardware-specific). The default
+# install ships with the rules-only fallback; users opt-in to a real backend.
+openvino = [
+    "openvino-genai>=2026.1",
+    "huggingface-hub>=0.27",
+]
+ollama = ["ollama>=0.4"]
+llama-cpp = ["llama-cpp-python>=0.3.4"]
+anthropic = ["anthropic>=0.40"]
+# Tilix dconf collector requires PyGObject (system deps libgirepository1.0).
+tilix = ["PyGObject>=3.50; sys_platform == 'linux'"]
+
+[project.scripts]
+tw = "traceweaver.cli:app"
+traceweaver-daemon = "traceweaver.daemon.app:run"
+
+[project.urls]
+Homepage = "https://traceweaver.dev"
+Documentation = "https://traceweaver.dev/docs"
+Repository = "https://github.com/traceweaver/traceweaver"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "pyright>=1.1.390",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "pytest-randomly>=3.15",
+    "hypothesis>=6.123",
+    "syrupy>=4.7",
+    "freezegun>=1.5",
+    "pip-audit>=2.7",
+    "bandit>=1.8",
+    "pre-commit>=4.0",
+    "cyclonedx-bom>=5.0",
+]
+ci = [
+    "coverage[toml]>=7.6",
+    "junitparser>=3.2",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/traceweaver"]
+
+[tool.uv]
+package = true
+managed = true
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+extend-exclude = ["src/traceweaver/store/migrations/versions"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",
+    "I",
+    "B",
+    "UP",
+    "S",
+    "C4",
+    "PTH",
+    "SIM",
+    "TID",
+    "PL",
+    "RUF",
+    "ASYNC",
+    "DTZ",
+    "T20",
+]
+ignore = [
+    "S101",
+    "PLR0913",
+    "PLR2004",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "PLR", "T20"]
+"src/traceweaver/store/migrations/**" = ["E501", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+# Resolve third-party imports (fastapi, sqlalchemy, pydantic, etc.) from
+# the project venv. Without this pair pyright reports every external
+# symbol as "could not be resolved" + cascading unknown-type errors.
+venvPath = "."
+venv = ".venv"
+include = ["src", "tests"]
+exclude = ["**/__pycache__", "**/.venv", "src/traceweaver/store/migrations"]
+reportMissingImports = "error"
+reportMissingTypeStubs = "warning"
+reportUnknownMemberType = "warning"
+reportUnknownVariableType = "warning"
+reportImplicitOverride = "error"
+reportShadowedImports = "error"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+]
+markers = [
+    "unit: fast, no IO",
+    "integration: real SQLite + git + inotify + socket",
+    "e2e: end-to-end with real LLM mock",
+    "real_llm: requires OpenVINO/Ollama/llama.cpp installed",
+    "slow: > 1s",
+    "secret_corpus: secret leak regression",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning:apscheduler",
+    "ignore::ResourceWarning",
+]
+
+[tool.coverage.run]
+source = ["src/traceweaver"]
+branch = true
+omit = ["src/traceweaver/store/migrations/*"]
+
+[tool.coverage.report]
+fail_under = 70
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests", "src/traceweaver/store/migrations"]
+skips = ["B101"]

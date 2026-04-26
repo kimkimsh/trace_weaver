@@ -1,0 +1,441 @@
+# TraceWeaver demo seed fixture (ADR-14 — versioned + deterministic).
+#
+# Loader: src/traceweaver/demo/seed.py
+# Spec  : docs/plan/03_data_storage.md §3.15 (canonical)
+# Scenario: docs/plan/13_user_scenarios.md §S9 (60s demo flow)
+#
+# Deterministic byte-equality after `tw forget --all`:
+#   - all timestamps are fixed ISO-8601 strings (loader converts to ns).
+#   - integer ids / counts / hashes are constants here.
+#   - the loader MUST NOT call time.time() / datetime.now().
+#
+# Counts (matching the synthesized upstream + S9 pre-conditions):
+#   events           = 10  (5 sources mixed: shell, git, fs, browser, tmux)
+#   conventions      =  7  (5 accepted, 1 edited, 1 pending is_inferable=true)
+#   recommendations  =  4  (skill candidates + slash-command + mdc-rule + agents-section)
+#   episodes         =  3  (debugging, feature, refactor)
+
+schema_version: 1
+created_at: 2026-04-26T09:00:00+09:00
+
+projects:
+  - id: 1
+    root_path: /home/demo/projects/trace-weaver-demo
+    primary_lang: python
+    ai_agents:
+      - claude-code
+      - cursor
+      - codex-cli
+      - aider
+      - gemini-cli
+
+repos:
+  - id: 1
+    project_id: 1
+    remote_url: https://github.com/demo/trace-weaver-demo
+    branch_default: main
+    hook_installed: true
+
+# --------------------------------------------------------------------------
+# Episodes — 3 kinds covering the 60s demo's three story arcs.
+# --------------------------------------------------------------------------
+episodes:
+  - id: 1
+    project_id: 1
+    started_at: 2026-04-25T10:00:00+09:00
+    ended_at:   2026-04-25T11:30:00+09:00
+    kind: debugging
+    summary: "FastAPI startup async race — fix in lifespan ordering"
+    confidence: 0.82
+
+  - id: 2
+    project_id: 1
+    started_at: 2026-04-25T13:00:00+09:00
+    ended_at:   2026-04-25T15:00:00+09:00
+    kind: feature
+    summary: "Add /api/v1/recommendations endpoint with skill+rule kinds"
+    confidence: 0.78
+
+  - id: 3
+    project_id: 1
+    started_at: 2026-04-25T16:00:00+09:00
+    ended_at:   2026-04-25T17:30:00+09:00
+    kind: refactor
+    summary: "Extract redaction tier table from collectors into a shared module"
+    confidence: 0.74
+
+# --------------------------------------------------------------------------
+# Events — exactly 10, mixing all 5 sources (shell / git / fs / browser / tmux).
+# Realistic-looking but already redacted (Tier-1 applied upstream).
+# --------------------------------------------------------------------------
+events:
+  # 1 — debugging episode, failing test
+  - ts: 2026-04-25T10:01:14+09:00
+    source: shell
+    payload_kind: shell.command.exit
+    project_id: 1
+    episode_id: 1
+    payload:
+      command: "uv run pytest tests/api -k startup"
+      exit_code: 1
+      cwd: /home/demo/projects/trace-weaver-demo
+      duration_ns: 4200000000
+      shell: zsh
+      session_id: 1714017600
+      branch: main
+      venv_active: true
+      ssh_session: false
+
+  # 2 — fs modify of lifespan.py
+  - ts: 2026-04-25T10:03:02+09:00
+    source: fs
+    payload_kind: fs.modify
+    project_id: 1
+    episode_id: 1
+    payload:
+      path: src/traceweaver/daemon/lifespan.py
+      size_delta: 142
+      ext: .py
+      language_inferred: python
+      head_hash: 7d0c1abf9a3e4d2f0c6e5b8a1d7f2c4e
+
+  # 3 — passing test
+  - ts: 2026-04-25T10:05:44+09:00
+    source: shell
+    payload_kind: shell.command.exit
+    project_id: 1
+    episode_id: 1
+    payload:
+      command: "uv run pytest tests/api -k startup"
+      exit_code: 0
+      cwd: /home/demo/projects/trace-weaver-demo
+      duration_ns: 3900000000
+      shell: zsh
+      session_id: 1714017600
+      branch: main
+      venv_active: true
+      ssh_session: false
+
+  # 4 — git commit landing the fix
+  - ts: 2026-04-25T10:12:00+09:00
+    source: git
+    payload_kind: git.commit
+    project_id: 1
+    episode_id: 1
+    payload:
+      sha: a1b2c3d4e5f60718293a4b5c6d7e8f90
+      author: demo
+      committer: demo
+      message: "fix(daemon): order lifespan startup hooks"
+      diff_stats:
+        plus: 18
+        minus: 4
+        files_changed:
+          - src/traceweaver/daemon/lifespan.py
+      branch: main
+      remote_url: https://github.com/demo/trace-weaver-demo
+
+  # 5 — browser visit researching the bug (FastAPI lifespan docs)
+  - ts: 2026-04-25T10:18:30+09:00
+    source: browser
+    payload_kind: browser.url.visit
+    project_id: 1
+    episode_id: 1
+    payload:
+      url: https://fastapi.tiangolo.com/advanced/events/
+      title: "Lifespan Events - FastAPI"
+      time_spent_ms: 92000
+      domain: fastapi.tiangolo.com
+
+  # 6 — feature episode kicks off — tmux focus change to a fresh pane
+  - ts: 2026-04-25T13:00:30+09:00
+    source: tmux
+    payload_kind: tmux.focus.change
+    project_id: 1
+    episode_id: 2
+    payload:
+      session_id: tw-feature
+      window_id: "@1"
+      pane_id: "%2"
+      pane_current_path: /home/demo/projects/trace-weaver-demo
+      pane_current_command: nvim
+
+  # 7 — fs create of new router
+  - ts: 2026-04-25T13:14:08+09:00
+    source: fs
+    payload_kind: fs.create
+    project_id: 1
+    episode_id: 2
+    payload:
+      path: src/traceweaver/api/routers/recommendations.py
+      size_delta: 2048
+      ext: .py
+      language_inferred: python
+      head_hash: 4f8e1c92ab53d7e604f1a2b3c4d5e6f7
+
+  # 8 — git commit landing the feature
+  - ts: 2026-04-25T14:42:21+09:00
+    source: git
+    payload_kind: git.commit
+    project_id: 1
+    episode_id: 2
+    payload:
+      sha: b2c3d4e5f60718293a4b5c6d7e8f9012
+      author: demo
+      committer: demo
+      message: "feat(api): /api/v1/recommendations with kind discriminator"
+      diff_stats:
+        plus: 124
+        minus: 6
+        files_changed:
+          - src/traceweaver/api/routers/recommendations.py
+          - src/traceweaver/api/dto.py
+          - tests/api/test_recommendations.py
+      branch: main
+      remote_url: https://github.com/demo/trace-weaver-demo
+
+  # 9 — refactor episode: shell command extracting redaction module
+  - ts: 2026-04-25T16:08:45+09:00
+    source: shell
+    payload_kind: shell.command.exit
+    project_id: 1
+    episode_id: 3
+    payload:
+      command: "ruff check --fix src/traceweaver/redact"
+      exit_code: 0
+      cwd: /home/demo/projects/trace-weaver-demo
+      duration_ns: 1200000000
+      shell: zsh
+      session_id: 1714024800
+      branch: refactor/redaction-tiers
+      venv_active: true
+      ssh_session: false
+
+  # 10 — refactor commit
+  - ts: 2026-04-25T17:21:09+09:00
+    source: git
+    payload_kind: git.commit
+    project_id: 1
+    episode_id: 3
+    payload:
+      sha: c3d4e5f60718293a4b5c6d7e8f901234
+      author: demo
+      committer: demo
+      message: "refactor(redact): tighten redaction tier table"
+      diff_stats:
+        plus: 56
+        minus: 78
+        files_changed:
+          - src/traceweaver/redact/tiers.py
+          - src/traceweaver/collectors/shell.py
+      branch: refactor/redaction-tiers
+      remote_url: https://github.com/demo/trace-weaver-demo
+
+# --------------------------------------------------------------------------
+# Conventions — exactly 7. Status mix: 5 accepted, 1 edited, 1 pending
+# (where the pending one carries is_inferable=true, demonstrating the
+# ETH-Zurich 4-gate "auto-exclude inferable" path of the demo).
+# --------------------------------------------------------------------------
+conventions:
+  # 1 — accepted
+  - id: 1
+    project_id: 1
+    kind: code-style
+    rule_text: "FastAPI lifespan ordering: paths -> migrations -> engine -> vec -> models"
+    evidence_count: 6
+    confidence: 0.91
+    examples_event_ids: [2, 3, 4]
+    first_seen: 2026-03-30T10:00:00+09:00
+    last_seen:  2026-04-25T10:12:00+09:00
+    is_inferable: false
+    user_status: accepted
+
+  # 2 — accepted
+  - id: 2
+    project_id: 1
+    kind: tooling
+    rule_text: "Run pytest via 'uv run pytest' (never bare pytest) — keeps lockfile env"
+    evidence_count: 9
+    confidence: 0.88
+    examples_event_ids: [1, 3]
+    first_seen: 2026-03-15T09:00:00+09:00
+    last_seen:  2026-04-25T10:05:44+09:00
+    is_inferable: false
+    user_status: accepted
+
+  # 3 — accepted
+  - id: 3
+    project_id: 1
+    kind: workflow
+    rule_text: "Commit messages use Conventional Commits prefix (feat/fix/refactor/docs/test)"
+    evidence_count: 24
+    confidence: 0.95
+    examples_event_ids: [4, 8, 10]
+    first_seen: 2026-02-18T08:30:00+09:00
+    last_seen:  2026-04-25T17:21:09+09:00
+    is_inferable: false
+    user_status: accepted
+
+  # 4 — accepted
+  - id: 4
+    project_id: 1
+    kind: architecture
+    rule_text: "One router file per domain under src/traceweaver/api/routers/"
+    evidence_count: 7
+    confidence: 0.84
+    examples_event_ids: [7, 8]
+    first_seen: 2026-03-22T10:00:00+09:00
+    last_seen:  2026-04-25T14:42:21+09:00
+    is_inferable: false
+    user_status: accepted
+
+  # 5 — accepted
+  - id: 5
+    project_id: 1
+    kind: avoid
+    rule_text: "Never log raw command lines pre-redaction; always emit Tier-1 redacted text"
+    evidence_count: 4
+    confidence: 0.79
+    examples_event_ids: [9]
+    first_seen: 2026-04-01T11:00:00+09:00
+    last_seen:  2026-04-25T16:08:45+09:00
+    is_inferable: false
+    user_status: accepted
+
+  # 6 — edited (user-customised wording)
+  - id: 6
+    project_id: 1
+    kind: code-style
+    rule_text: "Type-hint every public function signature; pyright strict on src/"
+    evidence_count: 5
+    confidence: 0.81
+    examples_event_ids: [7]
+    first_seen: 2026-03-10T09:00:00+09:00
+    last_seen:  2026-04-24T18:00:00+09:00
+    is_inferable: false
+    user_status: edited
+    user_edited_text: "Type-hint every public function; pyright strict on src/ AND tests/"
+
+  # 7 — pending + is_inferable=true (the highlighted ETH-Zurich case)
+  - id: 7
+    project_id: 1
+    kind: code-style
+    rule_text: "React routes use TanStack file-based routing under ui/src/routes/"
+    evidence_count: 3
+    confidence: 0.62
+    examples_event_ids: []
+    first_seen: 2026-04-10T09:00:00+09:00
+    last_seen:  2026-04-24T17:00:00+09:00
+    is_inferable: true
+    user_status: pending
+
+# --------------------------------------------------------------------------
+# Recommendations — 7 entries, of which 4 are skill candidates per the
+# §S9 demo flow ("skill candidates 4건"). The remaining 3 cover the
+# other recommendation kinds (slash-command / mdc-rule / agents-section)
+# so the Outputs screen has at least one example of every kind. All
+# pending by default so the demo's "Apply 7" flow has work to do.
+# --------------------------------------------------------------------------
+recommendations:
+  # 4 skill candidates ----------------------------------------------------
+  - id: 1
+    project_id: 1
+    kind: skill
+    evidence_count: 4
+    user_status: pending
+    created_at: 2026-04-25T11:30:00+09:00
+    content_md: |
+      ---
+      name: fastapi-lifespan-debugging
+      description: Diagnose FastAPI lifespan startup races; confirms ordering of paths/migrations/engine/vec/models.
+      allowed-tools: Bash, Read, Edit
+      ---
+      # FastAPI lifespan debugging
+      Use when a daemon's startup phase exhibits async ordering issues
+      (e.g. routes return 503 until the first request lands).
+
+  - id: 2
+    project_id: 1
+    kind: skill
+    evidence_count: 5
+    user_status: pending
+    created_at: 2026-04-25T11:35:00+09:00
+    content_md: |
+      ---
+      name: uv-pytest-runner
+      description: Always run pytest via `uv run pytest`; never bare pytest.
+      allowed-tools: Bash
+      ---
+      # uv pytest runner
+      Use the uv-managed environment so dependencies match the lockfile.
+
+  - id: 3
+    project_id: 1
+    kind: skill
+    evidence_count: 3
+    user_status: pending
+    created_at: 2026-04-25T15:10:00+09:00
+    content_md: |
+      ---
+      name: redaction-tier-refactor
+      description: Walk through the redaction-tier table extraction pattern.
+      allowed-tools: Read, Edit, Bash
+      ---
+      # Redaction tier refactor
+      Steps to lift redaction tiers into a shared module without breaking
+      collector-specific overrides.
+
+  - id: 4
+    project_id: 1
+    kind: skill
+    evidence_count: 4
+    user_status: pending
+    created_at: 2026-04-25T17:40:00+09:00
+    content_md: |
+      ---
+      name: conventional-commit-author
+      description: Compose Conventional Commit messages from staged diff hunks.
+      allowed-tools: Bash, Read
+      ---
+      # Conventional commit author
+      Generates feat / fix / refactor / docs / test / chore prefixed messages.
+
+  # Other kinds — slash-command / mdc-rule / agents-section --------------
+  - id: 5
+    project_id: 1
+    kind: slash-command
+    evidence_count: 3
+    user_status: pending
+    created_at: 2026-04-25T15:05:00+09:00
+    content_md: |
+      ---
+      name: /uv-test
+      description: Run pytest the project way — `uv run pytest` with the lockfile env.
+      ---
+      Run: uv run pytest $ARGS
+
+  - id: 6
+    project_id: 1
+    kind: mdc-rule
+    evidence_count: 5
+    user_status: pending
+    created_at: 2026-04-25T15:30:00+09:00
+    content_md: |
+      ---
+      description: Conventional Commits prefix is mandatory.
+      globs: "**/*"
+      alwaysApply: true
+      ---
+      Use Conventional Commits: feat / fix / refactor / docs / test / chore.
+
+  - id: 7
+    project_id: 1
+    kind: agents-section
+    evidence_count: 6
+    user_status: pending
+    created_at: 2026-04-25T17:35:00+09:00
+    content_md: |
+      ## Conventions (auto-curated by TraceWeaver)
+      - FastAPI lifespan ordering: paths -> migrations -> engine -> vec -> models
+      - Run pytest via `uv run pytest` (never bare pytest)
+      - One router file per domain under src/traceweaver/api/routers/
